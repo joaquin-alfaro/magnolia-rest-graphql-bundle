@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.formentor</groupId>
+    <artifactId>magnolia-rest-graphql-bundle</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+  <artifactId>magnolia-rest-graphql-bundle-webapp</artifactId>
+  <name>magnolia-rest-graphql-bundle: webapp</name>
+  <packaging>war</packaging>
+  <dependencies>
+    <!--
+     Add your project specific dependencies here:
+     A custom webapp typically is based on a magnolia webapp. The most simple and reduced bundle to start with is the "magnolia-empty-webapp" (see "option i" below).
+     To see a complete list of preconfigured Magnolia webapps, have a look at https://documentation.magnolia-cms.com/display/DOCS/Bundles+and+webapps
+     => Please just use one of the four below listed options!
+     Make sure to use the appropriate option (A or B) in the parent pom
+    -->
+
+    <!-- option i - magnolia-empty-webapp -->
+    <!-- Dependencies versions are already imported by parent pom. Requires "Option A" in the parent pom. -->
+    <!--
+    <dependency>
+      <groupId>info.magnolia</groupId>
+      <artifactId>magnolia-empty-webapp</artifactId>
+      <type>war</type>
+    </dependency>
+    <dependency>
+      <groupId>info.magnolia</groupId>
+      <artifactId>magnolia-empty-webapp</artifactId>
+      <type>pom</type>
+    </dependency>
+    -->
+
+    <!-- option ii - magnolia-community-webapp -->
+    <!-- Dependencies versions are already imported by parent pom. Requires "Option A" in the parent pom. -->
+    <dependency>
+      <groupId>info.magnolia.bundle</groupId>
+      <artifactId>magnolia-community-webapp</artifactId>
+      <type>war</type>
+    </dependency>
+    <dependency>
+      <groupId>info.magnolia.bundle</groupId>
+      <artifactId>magnolia-community-webapp</artifactId>
+      <type>pom</type>
+    </dependency>
+
+
+    <!-- option iii - magnolia-dx-core-webapp -->
+    <!-- Dependencies versions are already imported by parent pom. Requires "Option B" in the parent pom. -->
+    <!--
+    <dependency>
+      <groupId>info.magnolia.dx</groupId>
+      <artifactId>magnolia-dx-core-webapp</artifactId>
+      <type>war</type>
+    </dependency>
+    <dependency>
+      <groupId>info.magnolia.dx</groupId>
+      <artifactId>magnolia-dx-core-webapp</artifactId>
+      <type>pom</type>
+    </dependency>
+    -->
+
+    <!-- Demo projects -->
+    <!-- magnolia-travel-demo -->
+    <dependency>
+      <groupId>info.magnolia.demo</groupId>
+      <artifactId>magnolia-travel-demo</artifactId>
+    </dependency>
+    <!-- magnolia-travel-tours-demo -->
+    <dependency>
+      <groupId>info.magnolia.demo</groupId>
+      <artifactId>magnolia-travel-tours</artifactId>
+    </dependency>
+
+    <!-- magnolia-rest-graphql -->
+    <dependency>
+      <groupId>com.formentor</groupId>
+      <artifactId>magnolia-rest-graphql</artifactId>
+    </dependency>
+
+  </dependencies>
+
+  <build>
+    <finalName>magnolia-rest-graphql-bundle</finalName>
+    <plugins>
+      <plugin>
+        <artifactId>maven-war-plugin</artifactId>
+        <configuration>
+          <!-- exclude jars copied "physically" from the webapp overlay - so we only get those resolved by Maven's dependency management -->
+          <dependentWarExcludes>WEB-INF/lib/*.jar</dependentWarExcludes>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

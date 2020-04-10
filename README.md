@@ -1,0 +1,1 @@
+# magnolia-rest-graphql-bundle

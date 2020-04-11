@@ -1,0 +1,26 @@
+schema {
+    query: Query,
+    mutation: Mutation,
+    subscription: Subscription
+}
+
+type Query {
+    toursByCategory(category: String): [Tour]
+}
+
+type Tour {
+    name: String,
+    description: String,
+    body: String,
+    link: String,
+    author: String,
+    duration: String
+}
+
+type Mutation {
+
+}
+
+type Subscription{
+
+}

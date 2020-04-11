@@ -52,6 +52,13 @@
       <groupId>info.magnolia.rest</groupId>
       <artifactId>magnolia-rest-content-delivery</artifactId>
     </dependency>
+    <!-- magnolia-travel-tours-demo -->
+    <!-- For fixed query of Tours -->
+    <dependency>
+      <groupId>info.magnolia.demo</groupId>
+      <artifactId>magnolia-travel-tours</artifactId>
+    </dependency>
+
 
     <!-- graphql-java -->
     <dependency>

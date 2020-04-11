@@ -10,17 +10,41 @@
 
   <!-- For more information on module descriptor configuration options -->
   <!-- https://documentation.magnolia-cms.com/display/DOCS/XML-based+module+descriptor -->
-
+  <components>
+    <id>main</id>
+    <component>
+      <type>com.formentor.magnolia.rest.graphql.service.GraphQLProvider</type>
+      <implementation>com.formentor.magnolia.rest.graphql.service.GraphQLProvider</implementation>
+      <scope>singleton</scope>
+    </component>
+  </components>
   <dependencies>
     <dependency>
       <name>core</name>
       <version>*</version>
     </dependency>
+
     <!--  Add other dependencies here, e.g the mte (magnolia templating essentials).
     <dependency>
       <name>mte</name>
       <version>0.7/*</version>
     </dependency>
     -->
+    <dependency>
+      <name>rest-integration</name>
+      <version>*</version>
+    </dependency>
+    <dependency>
+      <name>rest-content-delivery</name>
+      <version>*</version>
+    </dependency>
+
+    <!-- magnolia-travel-tours-demo -->
+    <!-- For fixed query of Tours -->
+    <dependency>
+      <name>tours</name>
+      <version>*</version>
+    </dependency>
+
   </dependencies>
 </module>

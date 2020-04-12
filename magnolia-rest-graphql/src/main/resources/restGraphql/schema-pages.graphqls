@@ -1,0 +1,22 @@
+type Query {
+    page: [Page]
+}
+
+type Page {
+    property(name: String): String,
+    children(nodeType: String!): [Node]
+
+    name: String,
+    title: String,
+    main: [Area]
+    footer: [Area]
+}
+
+type Area {
+    components: [Component]
+}
+
+type Component {
+    property(name: String): String,
+    children(nodeType: String!): [Node]
+}

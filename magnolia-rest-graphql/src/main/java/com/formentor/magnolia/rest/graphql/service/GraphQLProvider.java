@@ -7,6 +7,8 @@ import com.google.common.io.Resources;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
+import graphql.language.FieldDefinition;
+import graphql.language.ObjectTypeDefinition;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.SchemaGenerator;
@@ -17,8 +19,12 @@ import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
+import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.List;
+import java.util.Optional;
 
 import static graphql.schema.idl.TypeRuntimeWiring.newTypeWiring;
 
@@ -57,8 +63,6 @@ public class GraphQLProvider {
     /**
      * Builds schema
      *
-     * TODO
-     * Builds schema dynamically from classes and annotations
      * @param sdl
      * @return
      */
@@ -67,6 +71,47 @@ public class GraphQLProvider {
         RuntimeWiring runtimeWiring = buildWiring();
         SchemaGenerator schemaGenerator = new SchemaGenerator();
         return schemaGenerator.makeExecutableSchema(typeRegistry, runtimeWiring);
+    }
+
+    public TypeDefinitionRegistry buildTypeRegistry() throws IOException, URISyntaxException {
+        // 1. Add the core graphql schema
+        URL coreGraphql = Resources.getResource("schema.graphqls");
+        String sdl = Resources.toString(coreGraphql, Charsets.UTF_8);
+        TypeDefinitionRegistry typeRegistry = new SchemaParser().parse(sdl);
+
+        // 2. Add the rest of graphql schemas
+        URL schemas = Resources.getResource("restGraphql");
+        File folder = new File(schemas.toURI());
+        for (File file: folder.listFiles()) {
+            String newsdl = Resources.toString(file.toURI().toURL(), Charsets.UTF_8);
+            TypeDefinitionRegistry newtypeRegistry = new SchemaParser().parse(newsdl);
+            mergeTypeRegistry(newtypeRegistry, typeRegistry);
+        }
+        return typeRegistry;
+    }
+
+    private void mergeTypeRegistry(TypeDefinitionRegistry from, TypeDefinitionRegistry to) {
+        for (ObjectTypeDefinition type: from.getTypes(ObjectTypeDefinition.class)) {
+            mergeTypeInto(type, to);
+        }
+    }
+
+    private void mergeTypeInto(ObjectTypeDefinition newType, TypeDefinitionRegistry registry) {
+        Optional<ObjectTypeDefinition> candidate = registry.getTypes(ObjectTypeDefinition.class)
+                .stream()
+                .filter(type -> type.getName().equals(newType.getName())).findFirst();
+        // 1. If exists, add field definitions, else add the type
+        if (candidate.isPresent()) {
+            List<FieldDefinition> fieldDefinitions = candidate.get().getFieldDefinitions();
+            fieldDefinitions.addAll(newType.getFieldDefinitions());
+
+            ObjectTypeDefinition newObjectTypeDefinition = candidate.get().transform(builder -> builder.fieldDefinitions(fieldDefinitions));
+            registry.remove(candidate.get());
+            registry.add(newObjectTypeDefinition);
+        } else {
+        // 2. If does not exist, add it
+            registry.add(newType);
+        }
     }
 
     private RuntimeWiring buildWiring() {

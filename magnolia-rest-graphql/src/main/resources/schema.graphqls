@@ -5,16 +5,12 @@ schema {
 }
 
 type Query {
-    toursByCategory(category: String): [Tour]
+    nodes(nodeType: String!): [Node]
 }
 
-type Tour {
-    name: String,
-    description: String,
-    body: String,
-    link: String,
-    author: String,
-    duration: String
+type Node {
+    property(name: String): String,
+    children(nodeType: String!): [Node]
 }
 
 type Mutation {

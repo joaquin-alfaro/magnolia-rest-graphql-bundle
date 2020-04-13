@@ -1,3 +1,5 @@
+directive @definition(workspace : String!, rootPath : String, nodeTypes : [String]) on FIELD_DEFINITION
+
 schema {
     query: Query,
     mutation: Mutation,
@@ -5,12 +7,40 @@ schema {
 }
 
 type Query {
-    nodes(nodeType: String!): [Node]
+    nodes(workspace: String!, path: String): [Node]
+    pages : [Page] @definition(workspace: "website", nodeTypes: ["mgnl:page", "mgnl:area"])
+}
+
+type Page {
+    name: String,
+    title: String,
+    description: String,
+    children: [Page]
 }
 
 type Node {
-    property(name: String): String,
-    children(nodeType: String!): [Node]
+    name: String,
+    path: String,
+    nodeType: String,
+    properties: [Property]
+    children: [Node],
+    contentMap: NodePage
+}
+
+type NodePage {
+    title: String,
+    description: String
+}
+
+type Property {
+    name: String,
+    string: String,
+    asset: Asset,
+    reference(workspace: String): Node
+}
+
+type Asset {
+    url: String
 }
 
 type Mutation {

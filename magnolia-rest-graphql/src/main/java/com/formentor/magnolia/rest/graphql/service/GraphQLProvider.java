@@ -213,7 +213,7 @@ public class GraphQLProvider {
             javax.jcr.Node rootNode = session.getNode((path == null) ?"/": path);
 
             final List<NodeMap> nodes = new ArrayList<>();
-            rootNode.getNodes().forEachRemaining(node -> nodes.add(new NodeMap((javax.jcr.Node)node)));
+            rootNode.getNodes().forEachRemaining(node -> nodes.add(new NodeMap((javax.jcr.Node)node, nodeTypes)));
 
             if (!nodeTypes.isEmpty()) {
                 return nodes.stream().filter(nodeMap -> {

@@ -3,6 +3,7 @@ package com.formentor.magnolia.rest.graphql.endpoint;
 import com.formentor.magnolia.rest.graphql.service.GraphQLProvider;
 import info.magnolia.rest.AbstractEndpoint;
 import info.magnolia.rest.EndpointDefinition;
+import info.magnolia.rest.delivery.jcr.i18n.I18n;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
@@ -20,6 +21,7 @@ import javax.ws.rs.core.Response;
 
 @Api(value = "/magnolia-rest-graphql")
 @Path("/magnolia-rest-graphql")
+@I18n
 @Slf4j
 public class GraphQLEndpoint<D extends EndpointDefinition> extends AbstractEndpoint<D> {
 

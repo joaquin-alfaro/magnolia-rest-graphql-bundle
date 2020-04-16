@@ -1,4 +1,5 @@
 directive @definition(workspace : String!, rootPath : String, nodeTypes : [String]) on FIELD_DEFINITION
+directive @delivery(workspace : String!, rootPath : String, nodeTypes : [String]) on FIELD_DEFINITION
 
 schema {
     query: Query,
@@ -9,6 +10,7 @@ schema {
 type Query {
     nodes(workspace: String!, path: String): [Node]
     pages : [Page] @definition(workspace: "website", nodeTypes: ["mgnl:page", "mgnl:area"])
+    tours_vX : [Node] @delivery(workspace: "tours", rootPath: "/", nodeTypes: ["mgnl:content"])
 }
 
 type Page {

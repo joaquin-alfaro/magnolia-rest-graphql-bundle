@@ -1,7 +1,10 @@
 package com.formentor.magnolia.rest.graphql.type;
 
+import lombok.extern.slf4j.Slf4j;
+
 import javax.jcr.RepositoryException;
 
+@Slf4j
 public class Property {
     private final javax.jcr.Property property;
 
@@ -13,8 +16,14 @@ public class Property {
         return property.getName();
     }
 
-    public String getString() throws RepositoryException {
-        return property.getString();
+    public String getString() {
+        try {
+            return property.getString();
+        } catch (Exception e) {
+            log.error("Errors getting string from property {}", property, e);
+            return null;
+        }
+
     }
 
 }

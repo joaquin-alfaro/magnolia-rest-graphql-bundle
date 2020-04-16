@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 public class NodeMap extends ContentMap {
-    // The get() of "children" will return the children nodes
+    // The get() of CHILDREN_FIELD will return the children nodes
     static private final String CHILDREN_FIELD = "children";
 
     // The children nodes will be filtered with NodeTypes defined at the fieldDefinition.
@@ -31,7 +31,7 @@ public class NodeMap extends ContentMap {
             throw new ClassCastException("ContentMap accepts only String as a parameters, provided object was of type "
                     + (key == null ? "null" : key.getClass().getName()));
         }
-        if ("children".equals(keyStr)) {
+        if (CHILDREN_FIELD.equals(keyStr)) {
             Node node = getJCRNode();
             try {
                 List<NodeMap> children = new ArrayList<>();

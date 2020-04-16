@@ -38,13 +38,5 @@
       <name>rest-content-delivery</name>
       <version>*</version>
     </dependency>
-
-    <!-- magnolia-travel-tours-demo -->
-    <!-- For fixed query of Tours -->
-    <dependency>
-      <name>tours</name>
-      <version>*</version>
-    </dependency>
-
   </dependencies>
 </module>

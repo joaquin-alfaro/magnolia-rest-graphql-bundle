@@ -1,12 +1,19 @@
+directive @definition(workspace : String!, rootPath : String, nodeTypes : [String]) on FIELD_DEFINITION
+
+schema {
+    query: Query,
+}
+
 type Query {
-    toursByCategory(category: String): [Tour]
+    tours_ql : [Tour] @definition(workspace: "tours", rootPath: "/magnolia-travels", nodeTypes: ["mgnl:content"])
 }
 
 type Tour {
-    name: String,
-    description: String,
-    body: String,
-    link: String,
     author: String,
-    duration: String
+    body: String,
+    description: String,
+    duration: Int,
+    isFeatured: Boolean,
+    location: String,
+    name: String
 }

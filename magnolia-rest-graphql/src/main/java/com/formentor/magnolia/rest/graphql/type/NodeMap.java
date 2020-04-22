@@ -31,32 +31,37 @@ public class NodeMap extends ContentMap {
             throw new ClassCastException("ContentMap accepts only String as a parameters, provided object was of type "
                     + (key == null ? "null" : key.getClass().getName()));
         }
+
+        // Special case for field "children
         if (CHILDREN_FIELD.equals(keyStr)) {
             Node node = getJCRNode();
             try {
-                List<NodeMap> children = new ArrayList<>();
-                node.getNodes().forEachRemaining(child -> children.add(new NodeMap((Node)child, nodeTypes)));
-                // Filter the children by nodeType
-                if (!nodeTypes.isEmpty()) {
-                    return children.stream()
-                            .filter(nodeMap -> {
-                                NodeTypesPredicate nodeTypesPredicate = new NodeTypesPredicate(nodeTypes, false);
-                                return nodeTypesPredicate.evaluateTyped(nodeMap.getJCRNode());
-                            })
-                            .collect(Collectors.toList());
-                }
-
-                return children;
+                return getChildren(node);
             } catch (RepositoryException e) {
                 log.error("Errors getting children of node {}", node, e);
             }
         }
-
         return super.get(key);
     }
 
     @Override
-    public boolean containsValue(Object arg0) {
-        return super.containsValue(arg0);
+    public boolean containsValue(Object value) {
+        return super.containsValue(value);
+    }
+
+    private List<NodeMap> getChildren(Node node) throws RepositoryException {
+        List<NodeMap> children = new ArrayList<>();
+        node.getNodes().forEachRemaining(child -> children.add(new NodeMap((Node)child, nodeTypes)));
+        // Filter the children by nodeType
+        if (!nodeTypes.isEmpty()) {
+            return children.stream()
+                    .filter(nodeMap -> {
+                        NodeTypesPredicate nodeTypesPredicate = new NodeTypesPredicate(nodeTypes, false);
+                        return nodeTypesPredicate.evaluateTyped(nodeMap.getJCRNode());
+                    })
+                    .collect(Collectors.toList());
+        }
+
+        return children;
     }
 }

@@ -1,5 +1,9 @@
 package com.formentor.magnolia.rest.graphql.service;
 
+import com.formentor.magnolia.rest.graphql.GraphQLDefinition;
+import com.formentor.magnolia.rest.graphql.registry.GraphQLEndpointDefinitionRegistry;
+import com.formentor.magnolia.rest.graphql.registry.GraphQLEndpointDefinitionRegistryEvent;
+import com.formentor.magnolia.rest.graphql.registry.GraphQLEndpointDefinitionRegistryEventHandler;
 import com.formentor.magnolia.rest.graphql.type.Node;
 import com.formentor.magnolia.rest.graphql.type.NodeMap;
 import com.google.common.base.Charsets;
@@ -24,18 +28,20 @@ import graphql.schema.idl.TypeRuntimeWiring;
 import info.magnolia.cms.i18n.I18nContentSupport;
 import info.magnolia.config.registry.DefinitionProvider;
 import info.magnolia.context.MgnlContext;
+import info.magnolia.event.EventBus;
+import info.magnolia.event.HandlerRegistration;
+import info.magnolia.event.SystemEventBus;
 import info.magnolia.rest.EndpointDefinition;
 import info.magnolia.rest.delivery.jcr.QueryBuilder;
 import info.magnolia.rest.delivery.jcr.filter.FilteringContentDecoratorBuilder;
-import info.magnolia.rest.delivery.jcr.filter.NodeTypesPredicate;
 import info.magnolia.rest.delivery.jcr.v2.JcrDeliveryEndpointDefinition;
 import info.magnolia.rest.registry.EndpointDefinitionRegistry;
-import info.magnolia.ui.form.fieldtype.definition.FieldTypeDefinition;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
+import javax.inject.Named;
 import javax.jcr.NodeIterator;
 import javax.jcr.Session;
 import javax.jcr.query.Query;
@@ -53,7 +59,7 @@ import static graphql.schema.idl.TypeRuntimeWiring.newTypeWiring;
 
 @Slf4j
 @Getter
-public class GraphQLProvider {
+public class GraphQLProvider implements GraphQLEndpointDefinitionRegistryEventHandler {
 
     // Directive "definition"
     private static final String DIRECTIVE_definition = "definition";
@@ -72,24 +78,26 @@ public class GraphQLProvider {
     private static final String NODE_type             = "Node";
 
     private final EndpointDefinitionRegistry endpointRegistry;
+    private final GraphQLEndpointDefinitionRegistry graphQLRegistry;
     private final I18nContentSupport i18nContentSupport;
+    private final EventBus systemEventBus;
 
     private GraphQL graphQL;
     private TypeDefinitionRegistry typeRegistry;
+    private HandlerRegistration registerHandler;
 
     @Inject
-    public GraphQLProvider(EndpointDefinitionRegistry endpointRegistry, I18nContentSupport i18nContentSupport) {
+    public GraphQLProvider(EndpointDefinitionRegistry endpointRegistry, GraphQLEndpointDefinitionRegistry graphQLRegistry, I18nContentSupport i18nContentSupport, @Named(SystemEventBus.NAME) EventBus systemEventBus) {
         this.endpointRegistry = endpointRegistry;
+        this.graphQLRegistry = graphQLRegistry;
         this.i18nContentSupport = i18nContentSupport;
+        this.systemEventBus = systemEventBus;
     }
 
-    /**
-     * TODO
-     * Scope must be PRIVATE, temporarily PUBLIC for testing purposes
-     */
     @PostConstruct
-    public void init() {
+    private void init() {
         try {
+            // Initialize graphQL
             typeRegistry = initTypeRegistry();
             RuntimeWiring runtimeWiring = buildWiring(typeRegistry);
 
@@ -97,8 +105,36 @@ public class GraphQLProvider {
             GraphQLSchema graphQLSchema = schemaGenerator.makeExecutableSchema(typeRegistry, runtimeWiring);
             graphQL = GraphQL.newGraphQL(graphQLSchema).build();
 
+            // Register all currently registered graphQL schemas
+            for (DefinitionProvider<GraphQLDefinition> provider : graphQLRegistry.getAllProviders()) {
+                try {
+                    registerGraphQL(provider);
+                } catch (Exception e) {
+                    log.error("Failed to register endpoint [{}]", provider.getMetadata().getReferenceId(), e);
+                    // Others should continue to be registered.
+                }
+            }
+
+            // Register all currently registered "delivery endpoints"
+            for (DefinitionProvider<EndpointDefinition> provider : endpointRegistry.getAllProviders()) {
+                if (provider.get() instanceof JcrDeliveryEndpointDefinition) {
+                    String sdl = buildGraphQLSDLForDeliveryEndpoint(provider);
+                    addSchema(sdl);
+                }
+            }
+
+            // Listen for changes to the registry to observe graphQL being added or removed
+            /**
+             * TODO
+             * Listen to delivery endpoint changes
+             * See info.magnolia.rest.RestDispatcherServlet
+             */
+            // NOTE: It does not listen to delivery endpoints changes
+            registerHandler = systemEventBus.addHandler(GraphQLEndpointDefinitionRegistryEvent.class, this);
+
             // Once the GraphQL service has been created, adds Delivery endpoints
-            addFieldsForDeliveryEndpoints();
+            // addFieldsForDeliveryEndpoints();
+
         } catch (IOException e) {
             log.error("ERRORS during initialization of GraphQL");
         }
@@ -148,6 +184,71 @@ public class GraphQLProvider {
         return builder.build();
     }
 
+    /**
+     * Register GraphQL definition
+     * @param provider
+     * @return
+     */
+    private Object registerGraphQL(DefinitionProvider<GraphQLDefinition> provider) {
+        if (!provider.isValid()) {
+            return null;
+        }
+
+        final GraphQLDefinition endpointDefinition = provider.get();
+        final String sdl = endpointDefinition.getSdl();
+        if (endpointDefinition.getSdl() != null) {
+            addSchema(sdl);
+        }
+
+        return provider;
+    }
+
+    /**
+     * Builds graphQL SDL for a given DeliveryEndpoint
+     *
+     * @param provider DefinitionProvider<JcrDeliveryEndpointDefinition>
+     * @return
+     */
+    private String buildGraphQLSDLForDeliveryEndpoint(DefinitionProvider<EndpointDefinition> provider) {
+
+        JcrDeliveryEndpointDefinition deliveryDefinition = (JcrDeliveryEndpointDefinition)provider.get();
+        /**
+         * 1. Get configuration of the Delivery endpoint required by the Field definition
+         */
+        String fieldName = provider.getMetadata().getReferenceId().replaceAll(File.separator, "_");
+        String workspace = deliveryDefinition.getWorkspace();
+        String rootPath = deliveryDefinition.getRootPath();
+        List<String> nodeTypes = deliveryDefinition.getNodeTypes();
+
+        /**
+         * 2. Create schema SDL for the type
+         */
+        /*
+             directive @delivery(workspace : String!, rootPath : String, nodeTypes : [String]) on FIELD_DEFINITION
+             type Query {
+                 nodes(workspace: String!, path: String): [Node]
+                 pages : [Page] @definition(workspace: "website", nodeTypes: ["mgnl:page", "mgnl:area"])
+                 tours_v1 : [Node] @delivery(workspace: "tours", rootPath: "/", nodeTypes: ["mgnl:content"])
+             }
+         */
+        StringBuilder sdlBuilder = new StringBuilder();
+        sdlBuilder.append("directive @delivery(workspace : String!, rootPath : String, nodeTypes : [String]) on FIELD_DEFINITION");
+        sdlBuilder.append(" type Query {");
+        sdlBuilder.append(fieldName).append(" : [Node]");
+        sdlBuilder.append(" @delivery(workspace: ").append("\"" + workspace + "\"");
+        if (rootPath != null) {
+            sdlBuilder.append(", rootPath: ").append("\"" + rootPath + "\"");
+        }
+        if (nodeTypes != null && !nodeTypes.isEmpty()) {
+            String nodeTypesAsString = nodeTypes.stream()
+                    .map(value -> "\"" + value + "\"")
+                    .collect(Collectors.joining(","));
+            sdlBuilder.append(", nodeTypes: [" + nodeTypesAsString + "])");
+        }
+        sdlBuilder.append("}");
+
+        return sdlBuilder.toString();
+    }
 
     /**
      * Builds wiring for "Query" type.
@@ -196,13 +297,16 @@ public class GraphQLProvider {
             String workspace = dataFetchingEnvironment.getArgument(QUERY_nodes_workspace);
             String path = dataFetchingEnvironment.getArgument(QUERY_nodes_path);
 
-            Session session = MgnlContext.getJCRSession(workspace);
-            javax.jcr.Node rootNode = session.getNode((path == null) ?"/": path);
+            try {
+                Session session = MgnlContext.getJCRSession(workspace);
+                javax.jcr.Node rootNode = session.getNode((path == null) ?"/": path);
+                List<Node> nodes = new ArrayList<>();
+                rootNode.getNodes().forEachRemaining(node -> nodes.add(new Node((javax.jcr.Node)node, Collections.emptyList())));
 
-            List<Node> nodes = new ArrayList<>();
-            rootNode.getNodes().forEachRemaining(node -> nodes.add(new Node((javax.jcr.Node)node, Collections.emptyList())));
-
-            return nodes;
+                return nodes;
+            } catch (Exception e) {
+                return Collections.emptyList();
+            }
         };
     }
 
@@ -277,17 +381,26 @@ public class GraphQLProvider {
 
         return dataFetchingEnvironment -> {
             Session session = MgnlContext.getJCRSession(workspace);
-            javax.jcr.Node rootNode = session.getNode((rootPath == null) ?"/": rootPath);
+
+            Query query = QueryBuilder.inWorkspace(session.getWorkspace())
+                    .rootPath(rootPath)
+                    .nodeTypes(nodeTypes)
+                    .build();
+            QueryResult result = query.execute();
+            NodeIterator nodeIterator = result.getNodes();
+
+            FilteringContentDecoratorBuilder decorators = new FilteringContentDecoratorBuilder()
+                    .childNodeTypes(Collections.emptyList())
+                    .strict(false)
+                    .depth(1)
+                    .includeSystemProperties(true)
+                    .supportI18n(i18nContentSupport);
+
+            nodeIterator = decorators.wrapNodeIterator(nodeIterator);
 
             final List<NodeMap> nodes = new ArrayList<>();
-            rootNode.getNodes().forEachRemaining(node -> nodes.add(new NodeMap((javax.jcr.Node)node, nodeTypes)));
+            nodeIterator.forEachRemaining(node -> nodes.add(new NodeMap((javax.jcr.Node)node, nodeTypes)));
 
-            if (!nodeTypes.isEmpty()) {
-                return nodes.stream().filter(nodeMap -> {
-                    NodeTypesPredicate nodeTypesPredicate = new NodeTypesPredicate(nodeTypes, false);
-                    return nodeTypesPredicate.evaluateTyped(nodeMap.getJCRNode());
-                }).collect(Collectors.toList());
-            }
             return nodes;
         };
     }
@@ -305,7 +418,6 @@ public class GraphQLProvider {
 
         return dataFetchingEnvironment -> {
             Session session = MgnlContext.getJCRSession(workspace);
-
 
             Query query = QueryBuilder.inWorkspace(session.getWorkspace())
                     .rootPath(rootPath)
@@ -388,71 +500,27 @@ public class GraphQLProvider {
         }
     }
 
-    /**
-     * Add Delivery endpoints to GraphQL.
-     *
-     */
-    private void addFieldsForDeliveryEndpoints() {
-        Optional<TypeDefinition> optionalTypeDefinitionQuery = typeRegistry.getType(QUERY);
+    @Override
+    public void onEndpointRegistered(GraphQLEndpointDefinitionRegistryEvent event) {
         /**
-         * Do nothing if "Query" type does not exist, because it contains all the query fields
+         * TODO Register just the new schema
          */
-        if (!optionalTypeDefinitionQuery.isPresent()) {
-            log.error("Delivery endpoints not created because Query type is missing");
-            return;
-        }
+        init();
+    }
+
+    @Override
+    public void onEndpointReregistered(GraphQLEndpointDefinitionRegistryEvent event) {
         /**
-         * Do nothing if "Node" type does not exist, because this type is used for jcr contents
+         * TODO Update just the updated schema
          */
-        Optional<TypeDefinition> optionalTypeDefinitionNode = typeRegistry.getType(NODE_type);
-        if (!optionalTypeDefinitionNode.isPresent()) {
-            log.error("Delivery endpoints not created because Node type is missing");
-            return;
-        }
+        init();
+    }
 
-        for (DefinitionProvider<EndpointDefinition> provider : endpointRegistry.getAllProviders()) {
-            if (provider.get() instanceof JcrDeliveryEndpointDefinition) {
-                JcrDeliveryEndpointDefinition deliveryDefinition = (JcrDeliveryEndpointDefinition)provider.get();
-                /**
-                 * 1. Get configuration of the Delivery endpoint required by the Field definition
-                 */
-                String fieldName = provider.getMetadata().getReferenceId().replaceAll(File.separator, "_");
-                String workspace = deliveryDefinition.getWorkspace();
-                String rootPath = deliveryDefinition.getRootPath();
-                List<String> nodeTypes = deliveryDefinition.getNodeTypes();
-
-                /**
-                 * 2. Create schema SDL for the type
-                 */
-                /*
-                     directive @delivery(workspace : String!, rootPath : String, nodeTypes : [String]) on FIELD_DEFINITION
-                     type Query {
-                         nodes(workspace: String!, path: String): [Node]
-                         pages : [Page] @definition(workspace: "website", nodeTypes: ["mgnl:page", "mgnl:area"])
-                         tours_v1 : [Node] @delivery(workspace: "tours", rootPath: "/", nodeTypes: ["mgnl:content"])
-                     }
-                 */
-                StringBuilder sdlBuilder = new StringBuilder();
-                sdlBuilder.append("directive @delivery(workspace : String!, rootPath : String, nodeTypes : [String]) on FIELD_DEFINITION");
-                sdlBuilder.append(" type Query {");
-                sdlBuilder.append(fieldName).append(" : [Node]");
-                sdlBuilder.append(" @delivery(workspace: ").append("\"" + workspace + "\"");
-                if (rootPath != null) {
-                    sdlBuilder.append(", rootPath: ").append("\"" + rootPath + "\"");
-                }
-                if (nodeTypes != null && !nodeTypes.isEmpty()) {
-                    String nodeTypesAsString = nodeTypes.stream()
-                                                    .map(value -> "\"" + value + "\"")
-                                                    .collect(Collectors.joining(","));
-                    sdlBuilder.append(", nodeTypes: [" + nodeTypesAsString + "])");
-                }
-                sdlBuilder.append("}");
-
-                /**
-                 * 3. Add schema to GraphQL object
-                 */
-                addSchema(sdlBuilder.toString());
-            }
-        }
+    @Override
+    public void onEndpointUnregistered(GraphQLEndpointDefinitionRegistryEvent event) {
+        /**
+         * TODO Unregister just the unregistered schema
+         */
+        init();
     }
 }

@@ -17,6 +17,12 @@
       <implementation>com.formentor.magnolia.rest.graphql.service.GraphQLProvider</implementation>
       <scope>singleton</scope>
     </component>
+    <component>
+      <type>com.formentor.magnolia.rest.graphql.registry.GraphQLEndpointDefinitionRegistry</type>
+      <implementation>com.formentor.magnolia.rest.graphql.registry.GraphQLEndpointDefinitionRegistry</implementation>
+      <scope>singleton</scope>
+    </component>
+
   </components>
   <dependencies>
     <dependency>

@@ -1,0 +1,4 @@
+directive @delivery(workspace : String!, rootPath : String, nodeTypes : [String]) on FIELD_DEFINITION
+type Query {
+    tours_v1 : [Node] @delivery(workspace: "tours", rootPath: "/", nodeTypes: ["mgnl:content"])
+}

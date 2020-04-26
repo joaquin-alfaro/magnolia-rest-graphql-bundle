@@ -1,15 +1,23 @@
-# magnolia-rest-graphql-bundle
-Bundle of Magnolia CMS to install and test the module **magnolia-rest-graphql**
+# magnolia-rest-graphql
+Module of Magnolia CMS that exposes contents of magnolia using the specification of GraphQL.  
+It converts Magnolia CMS in a GraphQL Server.
+> I recommend to read the specification of [GraphQL](https://graphql.org/)  
+
+## Features
+- Implementation of GraphQL server in Magnolia.
+- Configuration of GraphQL schemas as resources of Magnolia.
+- Transformation of Delivery endpoints to GraphQL schemas.
+- Based on the amazing GraphQL implementation [graphql-java](https://www.graphql-java.com/)
 
 ## Installation
-1. Generates the bundle of magnolia.
+Add maven dependency in the project of the magnolia bundle
 ```
-$ mvn clean package
-```
-2. Deploy the generated war file in the servlet container (tomcat, jboss etc.)
-```
-# In case of tomcat
-$ cp magnolia-rest-graphql-bundle-webapp/target/magnolia-rest-graphql-bundle.war /PATH_TO_TOMCAT/webapps
+<!-- magnolia-rest-graphql -->
+<dependency>
+    <groupId>com.formentor</groupId>
+    <artifactId>magnolia-rest-graphql</artifactId>
+    <version>${magnolia-rest-graphql.version}</version>
+</dependency>
 ```
 ## Usage
 Create GraphQL schemas as resources of Magnolia.  
@@ -44,11 +52,11 @@ GraphQL is available at this url:
 
 Use [GraphQL Playground](https://github.com/prisma-labs/graphql-playground) or similar to execute queries.
 1. Open the url of Magnolia from GraphQL Playground
-![Open the url of Magnolia from GraphQL Playground](magnolia-rest-graphql/_dev/graphql-playground-add-url.png)
+![Open the url of Magnolia from GraphQL Playground](_dev/graphql-playground-add-url.png)
 2. Check the schema in the docs tab
-![Check the schema in the docs tab](magnolia-rest-graphql/_dev/graphql-playground-schema.png)
+![Check the schema in the docs tab](_dev/graphql-playground-schema.png)
 3. Launch queries to Magnolia
-![Check the schema in the docs tab](magnolia-rest-graphql/_dev/graphql-playground-query.png)
+![Check the schema in the docs tab](_dev/graphql-playground-query.png)
 
 ## Query nodes
 The query includes the field Nodes that allows to make the same queries as the endpoint **/.rest/nodes/v1/{workspace}/{path}**
@@ -57,7 +65,7 @@ The query includes the field Nodes that allows to make the same queries as the e
 - **path** to get the path of the JCR Node.
 - **nodeType** to get the node type of the JCR Node.
 - **children** to get the children nodes.
-![Nodes endpoints](magnolia-rest-graphql/_dev/graphql-playground-nodes.png)
+![Nodes endpoints](_dev/graphql-playground-nodes.png)
 **Example of query**
 ```
 query {
@@ -80,9 +88,9 @@ query {
 The delivery endpoints are available as fields inside the Query type and the name of the field is the url of the delivery endpoint replacing "/" by "_".  
 For example the delivery endpoint **/.rest/delivery/tours/v1** will be named **delivery_tours_v1**
 
-![Delivery endpoints](magnolia-rest-graphql/_dev/graphql-playground-delivery.png)
+![Delivery endpoints](_dev/graphql-playground-delivery.png)
 The fields available to queries mapped with delivery endpoints can be checked at the schema:
-![Delivery endpoints](magnolia-rest-graphql/_dev/graphql-playground-delivery-schema.png)
+![Delivery endpoints](_dev/graphql-playground-delivery-schema.png)
 #### Fields
 - *name* to get the name of the JCR Node.
 - *path* to get the path of the JCR Node.
@@ -103,3 +111,4 @@ query {
   }
 }
 ```
+## Caveats

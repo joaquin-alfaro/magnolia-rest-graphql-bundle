@@ -124,17 +124,8 @@ public class GraphQLProvider implements GraphQLEndpointDefinitionRegistryEventHa
             }
 
             // Listen for changes to the registry to observe graphQL being added or removed
-            /**
-             * TODO
-             * Listen to delivery endpoint changes
-             * See info.magnolia.rest.RestDispatcherServlet
-             */
             // NOTE: It does not listen to delivery endpoints changes
             registerHandler = systemEventBus.addHandler(GraphQLEndpointDefinitionRegistryEvent.class, this);
-
-            // Once the GraphQL service has been created, adds Delivery endpoints
-            // addFieldsForDeliveryEndpoints();
-
         } catch (IOException e) {
             log.error("ERRORS during initialization of GraphQL");
         }

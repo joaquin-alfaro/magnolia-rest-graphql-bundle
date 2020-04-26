@@ -30,7 +30,6 @@ public class GraphQLEndpoint<D extends EndpointDefinition> extends AbstractEndpo
     private static final String STATUS_MESSAGE_NO_CONTENT = "No content and Not Found";
     private static final String STATUS_MESSAGE_NOT_FOUND = "Not Found";
     private static final String STATUS_MESSAGE_INTERNAL_ERROR = "Internal Server Error";
-    private static final String STATUS_MESSAGE_BAD_REQUEST = "Bad request or missing parameters";
 
     private final GraphQLProvider graphQLService;
     @Inject
@@ -57,5 +56,4 @@ public class GraphQLEndpoint<D extends EndpointDefinition> extends AbstractEndpo
         Object result = graphQLService.execute(request.getQuery());
         return (result != null)? Response.ok(result).build(): Response.status(Response.Status.NO_CONTENT).build();
     }
-
 }
